@@ -2,6 +2,7 @@
 import { EventEmitter } from 'events'
 import { RequestInit } from 'node-fetch'
 import * as puppeteer from 'puppeteer'
+import PollVote from './src/structures/PollVote'
 
 declare namespace WAWebJS {
 
@@ -330,6 +331,12 @@ declare namespace WAWebJS {
 
         /** Emitted when the RemoteAuth session is saved successfully on the external Database */
         on(event: 'remote_session_saved', listener: () => void): this
+
+        /** Emitted when a poll vote is received */
+        on(event: 'poll_vote', listener: (
+            /** The poll vote */
+            vote: PollVote
+        ) => void): this
     }
 
     /** Current connection information */
@@ -596,6 +603,7 @@ declare namespace WAWebJS {
         STATE_CHANGED = 'change_state',
         BATTERY_CHANGED = 'change_battery',
         REMOTE_SESSION_SAVED = 'remote_session_saved',
+        POLL_VOTE = 'poll_vote'
         CALL = 'call'
     }
 
@@ -659,6 +667,7 @@ declare namespace WAWebJS {
         PROTOCOL = 'protocol',
         REACTION = 'reaction',
         TEMPLATE_BUTTON_REPLY = 'template_button_reply',
+        POLL_CREATION = 'poll_creation',
     }
 
     /** Client status */
@@ -818,6 +827,10 @@ declare namespace WAWebJS {
         selectedRowId?: string,
         /** Returns message in a raw format */
         rawData: object,
+        /** Avaiaible poll voting options */
+        pollOptions: string[],
+        /** The current poll votes, refresh with .refreshPollVotes() */
+        pollVotes: PollVote[],
         /* 
         * Reloads this Message object's data in-place with the latest values from WhatsApp Web. 
         * Note that the Message must still be in the web app cache for this to work, otherwise will return null.
@@ -863,6 +876,15 @@ declare namespace WAWebJS {
          * Gets the payment details associated with a given message
          */
         getPayment: () => Promise<Payment>,
+        /**
+         * Refreshes the current poll votes, only works with a poll_creation message
+         */
+        refreshPollVotes: () => Promise<void>,
+        /**
+         * Vote on the poll, only works with a poll_creation message
+         * @param {Array<string>} selectedOptions The selected options from .pollOptions
+         */
+        vote: (selectedOptions: string[]) => Promise<void>,
         /**
          * Gets the reactions associated with the given message
          */
@@ -1496,6 +1518,12 @@ declare namespace WAWebJS {
         msgId: MessageId
         senderId: string
         ack?: number
+    }
+
+    export class PollVote {
+        selectedOptions: string[]
+        sender: string
+        senderTimestampMs: number
     }
     
     export type ReactionList = {

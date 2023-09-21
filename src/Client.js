@@ -14,6 +14,7 @@ const WebCacheFactory = require('./webCache/WebCacheFactory');
 const { ClientInfo, Message, MessageMedia, Contact, Location, GroupNotification, Label, Call, Buttons, List, Reaction, Chat } = require('./structures');
 const LegacySessionAuth = require('./authStrategies/LegacySessionAuth');
 const NoAuth = require('./authStrategies/NoAuth');
+const PollVote = require('./structures/PollVote');
 
 /**
  * Starting point for interacting with the WhatsApp Web API
@@ -49,6 +50,7 @@ const NoAuth = require('./authStrategies/NoAuth');
  * @fires Client#group_update
  * @fires Client#disconnected
  * @fires Client#change_state
+ * @fires Client#poll_vote
  * @fires Client#contact_changed
  * @fires Client#group_admin_changed
  */
@@ -89,7 +91,14 @@ class Client extends EventEmitter {
      * Sets up events and requirements, kicks off authentication request
      */
     async initialize() {
-        let [browser, page] = [null, null];
+        /**
+         * @type {puppeteer.Browser}
+         */
+        let browser = null;
+        /**
+         * @type {puppeteer.Page}
+         */
+        let page = null;
 
         await this.authStrategy.beforeBrowserInitialized();
 
@@ -587,6 +596,19 @@ class Client extends EventEmitter {
             this.emit(Events.INCOMING_CALL, cll);
         });
 
+        await page.exposeFunction('onPollVote', (vote) => {
+            const vote_ = new PollVote(this, vote);
+            /**
+             * Emitted when a poll vote is received
+             * @event Client#poll_vote
+             * @param {object} vote
+             * @param {string} vote.sender Sender of the vote
+             * @param {number} vote.senderTimestampMs Timestamp the vote was sent
+             * @param {Array<string>} vote.selectedOptions Options selected
+             */
+            this.emit(Events.POLL_VOTE, vote_);
+        });
+
         await page.exposeFunction('onReaction', (reactions) => {
             for (const reaction of reactions) {
                 /**
@@ -665,8 +687,14 @@ class Client extends EventEmitter {
                     }
                 }
             });
-            window.Store.Chat.on('change:unreadCount', (chat) => {window.onChatUnreadCountEvent(chat);});
 
+            window.Store.PollVote.on('add', (vote) => {
+                if (vote.parentMsgKey) vote.pollCreationMessage = window.Store.Msg.get(vote.parentMsgKey).serialize();
+                window.onPollVote(vote);
+            });
+
+            window.Store.Chat.on('change:unreadCount', (chat) => {window.onChatUnreadCountEvent(chat);});
+            
             {
                 const module = window.Store.createOrUpdateReactionsModule;
                 const ogMethod = module.createOrUpdateReactions;

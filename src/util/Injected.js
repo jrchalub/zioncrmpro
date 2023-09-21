@@ -57,8 +57,10 @@ exports.ExposeStore = (moduleRaidStr) => {
     window.Store.QuotedMsg = window.mR.findModule('getQuotedMsgObj')[0];
     window.Store.Socket = window.mR.findModule('deprecatedSendIq')[0];
     window.Store.SocketWap = window.mR.findModule('wap')[0];
+    window.Store.SendVote = window.mR.findModule('sendVote')[0];
     window.Store.SearchContext = window.mR.findModule('getSearchContext')[0].getSearchContext;
     window.Store.DrawerManager = window.mR.findModule('DrawerManager')[0].DrawerManager;
+
     window.Store.StickerTools = {
         ...window.mR.findModule('toWebpSticker')[0],
         ...window.mR.findModule('addWebpMetadata')[0]
@@ -501,6 +503,10 @@ exports.LoadUtils = () => {
             msg.id = Object.assign({}, msg.id, { remote: msg.id.remote._serialized });
         }
 
+        if (msg.type == 'poll_creation') {
+            msg.pollVotes = window.Store.PollVote.getForParent(msg.id).getModelsArray().map(a => a.serialize());
+        }
+
         delete msg.pendingAckUpdate;
 
         return msg;
@@ -802,6 +808,18 @@ exports.LoadUtils = () => {
         await window.Store.Socket.deprecatedCastStanza(stanza);
     };
 
+    window.WWebJS.votePoll = async (pollCreationMessageId, selectedOptions) => {
+        const msg = window.Store.Msg.get(pollCreationMessageId);
+        if (msg.type != 'poll_creation') throw 'Quoted message is not a poll creation message!';
+        let localIdSet = new Set();
+        msg.pollOptions.map(a => {
+            for (const option of selectedOptions) {
+                if (a.name == option) localIdSet.add(a.localId);
+            }
+        });
+        await window.Store.SendVote.sendVote(msg, localIdSet);
+    };
+    
     window.WWebJS.cropAndResizeImage = async (media, options = {}) => {
         if (!media.mimetype.includes('image'))
             throw new Error('Media is not an image');
