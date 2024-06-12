@@ -109,7 +109,7 @@ declare namespace WAWebJS {
          * @param chatId ID of the chat that will be muted
          * @param unmuteDate Date when the chat will be unmuted, leave as is to mute forever
          */
-        muteChat(chatId: string, unmuteDate?: Date): Promise<void>
+        muteChat(chatId: string, unmuteDate?: Date): Promise<{ isMuted: boolean, muteExpiration: number }>
 
         /** Force reset of connection state for the client */
         resetState(): Promise<void>
@@ -169,7 +169,7 @@ declare namespace WAWebJS {
         unarchiveChat(chatId: string): Promise<boolean>
 
         /** Unmutes the Chat */
-        unmuteChat(chatId: string): Promise<void>
+        unmuteChat(chatId: string): Promise<{ isMuted: boolean, muteExpiration: number }>
 
         /** Sets the current user's profile picture */
         setProfilePicture(media: MessageMedia): Promise<boolean>
@@ -660,6 +660,8 @@ declare namespace WAWebJS {
         AUTHENTICATED = 'authenticated',
         AUTHENTICATION_FAILURE = 'auth_failure',
         READY = 'ready',
+        CHAT_REMOVED = 'chat_removed',
+        CHAT_ARCHIVED = 'chat_archived',
         MESSAGE_RECEIVED = 'message',
         MESSAGE_CIPHERTEXT = 'message_ciphertext',
         MESSAGE_CREATE = 'message_create',
@@ -667,6 +669,8 @@ declare namespace WAWebJS {
         MESSAGE_REVOKED_ME = 'message_revoke_me',
         MESSAGE_ACK = 'message_ack',
         MESSAGE_EDIT = 'message_edit',
+        UNREAD_COUNT = 'unread_count',
+        MESSAGE_REACTION = 'message_reaction',
         MEDIA_UPLOADED = 'media_uploaded',
         CONTACT_CHANGED = 'contact_changed',
         GROUP_JOIN = 'group_join',
@@ -680,7 +684,8 @@ declare namespace WAWebJS {
         STATE_CHANGED = 'change_state',
         BATTERY_CHANGED = 'change_battery',
         REMOTE_SESSION_SAVED = 'remote_session_saved',
-        CALL = 'call'
+        INCOMING_CALL = 'call',
+        VOTE_UPDATE = 'vote_update'
     }
 
     /** Group notification types */
@@ -1397,10 +1402,10 @@ declare namespace WAWebJS {
         /** Loads chat messages, sorted from earliest to latest. */
         fetchMessages: (searchOptions: MessageSearchOptions) => Promise<Message[]>,
         /** Mutes this chat forever, unless a date is specified */
-        mute: (unmuteDate?: Date) => Promise<void>,
+        mute: (unmuteDate?: Date) => Promise<{ isMuted: boolean, muteExpiration: number }>,
         /** Send a message to this chat */
         sendMessage: (content: MessageContent, options?: MessageSendOptions) => Promise<Message>,
-        /** Set the message as seen */
+        /** Set the chat as seen */
         sendSeen: () => Promise<void>,
         /** Simulate recording audio in chat. This will last for 25 seconds */
         sendStateRecording: () => Promise<void>,
@@ -1409,7 +1414,7 @@ declare namespace WAWebJS {
         /** un-archives this chat */
         unarchive: () => Promise<void>,
         /** Unmutes this chat */
-        unmute: () => Promise<void>,
+        unmute: () => Promise<{ isMuted: boolean, muteExpiration: number }>,
         /** Returns the Contact that corresponds to this Chat. */
         getContact: () => Promise<Contact>,
         /** Marks this Chat as unread */
