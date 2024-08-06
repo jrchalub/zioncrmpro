@@ -91,7 +91,6 @@ class Client extends EventEmitter {
     /**
      * Injection logic
      * Private function
-     * @property {boolean} reinject is this a reinject?
      */
     async inject() {
         await this.pupPage.waitForFunction('window.Debug?.VERSION != undefined', {timeout: this.options.authTimeoutMs});
@@ -367,7 +366,6 @@ class Client extends EventEmitter {
     /**
      * Attach event listeners to WA Web
      * Private function
-     * @property {boolean} reinject is this a reinject?
      */
     async attachEventListeners() {
         await exposeFunctionIfAbsent(this.pupPage, 'onAddMessageEvent', msg => {
